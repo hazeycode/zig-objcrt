@@ -2,13 +2,15 @@
 
 const std = @import("std");
 
-const c = @cImport({
-    @cInclude("objc/message.h");
-});
+pub const types = @import("types.zig");
+pub const Object = types.Object;
+pub const id = types.id;
+pub const Class = types.Class;
+pub const SEL = types.SEL;
 
-pub const id = c.id;
-pub const Class = c.Class;
-pub const SEL = c.SEL;
+const type_encodings = @import("type_encodings.zig");
+
+const c = @import("c.zig");
 
 pub fn lookupClass(class_name: [:0]const u8) !Class {
     return c.objc_lookUpClass(class_name) orelse error.NotFound;
