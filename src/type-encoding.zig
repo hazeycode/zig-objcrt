@@ -49,61 +49,61 @@ pub fn writeEncodingForType(comptime T: type, writer: anytype) !void {
 
 fn writeEncodingForTypeInternal(comptime T: type, levels_of_indirection: *u32, writer: anytype) !void {
     switch (T) {
-        i8 => try writer.writeByte(@enumToInt(TypeEncodingToken.char)),
-        c_int => try writer.writeByte(@enumToInt(TypeEncodingToken.int)),
-        c_short => try writer.writeByte(@enumToInt(TypeEncodingToken.short)),
-        c_long => try writer.writeByte(@enumToInt(TypeEncodingToken.long)),
-        c_longlong => try writer.writeByte(@enumToInt(TypeEncodingToken.long_long)),
-        u8 => try writer.writeByte(@enumToInt(TypeEncodingToken.unsigned_char)),
-        c_uint => try writer.writeByte(@enumToInt(TypeEncodingToken.unsigned_int)),
-        c_ushort => try writer.writeByte(@enumToInt(TypeEncodingToken.unsigned_short)),
-        c_ulong => try writer.writeByte(@enumToInt(TypeEncodingToken.unsigned_long)),
-        c_ulonglong => try writer.writeByte(@enumToInt(TypeEncodingToken.unsigned_long_long)),
-        f32 => try writer.writeByte(@enumToInt(TypeEncodingToken.float)),
-        f64 => try writer.writeByte(@enumToInt(TypeEncodingToken.double)),
-        bool => try writer.writeByte(@enumToInt(TypeEncodingToken.bool)),
-        void => try writer.writeByte(@enumToInt(TypeEncodingToken.void)),
-        [*c]u8, [*c]const u8 => try writer.writeByte(@enumToInt(TypeEncodingToken.char_string)),
-        id => try writer.writeByte(@enumToInt(TypeEncodingToken.object)),
-        Class => try writer.writeByte(@enumToInt(TypeEncodingToken.class)),
-        SEL => try writer.writeByte(@enumToInt(TypeEncodingToken.selector)),
+        i8 => try writeTypeEncodingToken(.char, writer),
+        c_int => try writeTypeEncodingToken(.int, writer),
+        c_short => try writeTypeEncodingToken(.short, writer),
+        c_long => try writeTypeEncodingToken(.long, writer),
+        c_longlong => try writeTypeEncodingToken(.long_long, writer),
+        u8 => try writeTypeEncodingToken(.unsigned_char, writer),
+        c_uint => try writeTypeEncodingToken(.unsigned_int, writer),
+        c_ushort => try writeTypeEncodingToken(.unsigned_short, writer),
+        c_ulong => try writeTypeEncodingToken(.unsigned_long, writer),
+        c_ulonglong => try writeTypeEncodingToken(.unsigned_long_long, writer),
+        f32 => try writeTypeEncodingToken(.float, writer),
+        f64 => try writeTypeEncodingToken(.double, writer),
+        bool => try writeTypeEncodingToken(.bool, writer),
+        void => try writeTypeEncodingToken(.void, writer),
+        [*c]u8, [*c]const u8 => try writeTypeEncodingToken(.char_string, writer),
+        id => try writeTypeEncodingToken(.object, writer),
+        Class => try writeTypeEncodingToken(.class, writer),
+        SEL => try writeTypeEncodingToken(.selector, writer),
         object => {
-            try writer.writeByte(@enumToInt(TypeEncodingToken.struct_begin));
+            try writeTypeEncodingToken(.struct_begin, writer);
             try writer.writeAll(@typeName(T));
-            try writer.writeByte(@enumToInt(TypeEncodingToken.pair_separator));
-            try writer.writeByte(@enumToInt(TypeEncodingToken.class));
-            try writer.writeByte(@enumToInt(TypeEncodingToken.struct_end));
+            try writeTypeEncodingToken(.pair_separator, writer);
+            try writeTypeEncodingToken(.class, writer);
+            try writeTypeEncodingToken(.struct_end, writer);
         },
         else => switch (@typeInfo(T)) {
-            .Fn => |_| try writer.writeByte(@enumToInt(TypeEncodingToken.unknown)),
+            .Fn => |_| try writeTypeEncodingToken(.unknown, writer),
             .Array => |arr_info| {
-                try writer.writeByte(@enumToInt(TypeEncodingToken.array_begin));
+                try writeTypeEncodingToken(.array_begin, writer);
                 try writer.print("{d}", .{arr_info.len});
                 try writeEncodingForTypeInternal(arr_info.child, levels_of_indirection, writer);
-                try writer.writeByte(@enumToInt(TypeEncodingToken.array_end));
+                try writeTypeEncodingToken(.array_end, writer);
             },
             .Struct => |struct_info| {
-                try writer.writeByte(@enumToInt(TypeEncodingToken.struct_begin));
+                try writeTypeEncodingToken(.struct_begin, writer);
                 try writer.writeAll(@typeName(T));
                 if (levels_of_indirection.* < 2) {
-                    try writer.writeByte(@enumToInt(TypeEncodingToken.pair_separator));
+                    try writeTypeEncodingToken(.pair_separator, writer);
                     inline for (struct_info.fields) |field| try writeEncodingForTypeInternal(field.field_type, levels_of_indirection, writer);
                 }
-                try writer.writeByte(@enumToInt(TypeEncodingToken.struct_end));
+                try writeTypeEncodingToken(.struct_end, writer);
             },
             .Union => |union_info| {
-                try writer.writeByte(@enumToInt(TypeEncodingToken.union_begin));
+                try writeTypeEncodingToken(.union_begin, writer);
                 try writer.writeAll(@typeName(T));
                 if (levels_of_indirection.* < 2) {
-                    try writer.writeByte(@enumToInt(TypeEncodingToken.pair_separator));
+                    try writeTypeEncodingToken(.pair_separator, writer);
                     inline for (union_info.fields) |field| try writeEncodingForTypeInternal(field.field_type, levels_of_indirection, writer);
                 }
-                try writer.writeByte(@enumToInt(TypeEncodingToken.union_end));
+                try writeTypeEncodingToken(.union_end, writer);
             },
             .Pointer => |ptr_info| switch (ptr_info.size) {
                 .One => {
                     levels_of_indirection.* += 1;
-                    try writer.writeByte(@enumToInt(TypeEncodingToken.pointer));
+                    try writeTypeEncodingToken(.pointer, writer);
                     try writeEncodingForTypeInternal(ptr_info.child, levels_of_indirection, writer);
                 },
                 else => @compileError("Unsupported type"),
@@ -111,6 +111,10 @@ fn writeEncodingForTypeInternal(comptime T: type, levels_of_indirection: *u32, w
             else => @compileError("Unsupported type"),
         },
     }
+}
+
+fn writeTypeEncodingToken(token: TypeEncodingToken, writer: anytype) !void {
+    try writer.writeByte(@enumToInt(token));
 }
 
 test "write encoding for array" {
