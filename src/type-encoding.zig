@@ -1,11 +1,14 @@
+//! Thid module provides functions to convert supported Zig types to Objective-C type encodings
+// TODO(hazeycode): more tests
+
 const std = @import("std");
 const testing = std.testing;
 
-pub const types = @import("types.zig");
-const Object = types.Object;
-const id = types.id;
-const Class = types.Class;
-const SEL = types.SEL;
+const objc = @import("objc.zig");
+const object = objc.object;
+const Class = objc.Class;
+const id = objc.id;
+const SEL = objc.SEL;
 
 /// https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html
 const TypeEncodingToken = enum(u8) {
@@ -64,7 +67,7 @@ fn writeEncodingForTypeInternal(comptime T: type, levels_of_indirection: *u32, w
         id => try writer.writeByte(@enumToInt(TypeEncodingToken.object)),
         Class => try writer.writeByte(@enumToInt(TypeEncodingToken.class)),
         SEL => try writer.writeByte(@enumToInt(TypeEncodingToken.selector)),
-        Object => {
+        object => {
             try writer.writeByte(@enumToInt(TypeEncodingToken.struct_begin));
             try writer.writeAll(@typeName(T));
             try writer.writeByte(@enumToInt(TypeEncodingToken.pair_separator));
@@ -142,10 +145,6 @@ test "write encoding for struct, pointer to struct and pointer to pointer to str
     {
         var fbs = std.io.fixedBufferStream(&buffer);
         try writeEncodingForType(**Example, fbs.writer());
-        const res = fbs.getWritten();
-        std.debug.print("{s}\n", .{res});
-        try testing.expectEqualSlices(u8, "^^{Example}", res);
+        try testing.expectEqualSlices(u8, "^^{Example}", fbs.getWritten());
     }
 }
-
-// TODO(hazeycode): more tests

@@ -1,14 +1,19 @@
-// Zig wrapper for objc runtime. Rather unsafe, use will caution
+//! This is the top level module that exposes type-safe Objective-C runtime bindings and convenience wrappers
 
 const std = @import("std");
 
-pub const types = @import("types.zig");
-pub const Object = types.Object;
-pub const id = types.id;
-pub const Class = types.Class;
-pub const SEL = types.SEL;
+const objc = @import("objc.zig");
+pub const object = objc.object;
+pub const Class = objc.Class;
+pub const id = objc.id;
+pub const SEL = objc.SEL;
+pub const sel_registerName = objc.sel_registerName;
+pub const sel_getUid = objc.sel_getUid;
 
-const type_encodings = @import("type_encodings.zig");
+const message = @import("message.zig");
+pub const msgSend = message.msgSend;
+
+const type_encoding = @import("type-encoding.zig");
 
 const c = @import("c.zig");
 
@@ -34,59 +39,7 @@ pub fn allocAndInit(class: Class) id {
     return msgSend(msgSend(class, "alloc", .{}, Class), "init", .{}, id);
 }
 
-pub fn msgSend(obj: anytype, sel_name: [:0]const u8, args: anytype, comptime ReturnType: type) ReturnType {
-    const args_meta = @typeInfo(@TypeOf(args)).Struct.fields;
-
-    const FnType = blk: {
-        {
-            // NOTE(hazeycode): The following commented out code crashes the compiler :( last tested with Zig 0.9.0
-            // https://github.com/ziglang/zig/issues/9526
-            // comptime var fn_args: [2 + args_meta.len]std.builtin.TypeInfo.FnArg = undefined;
-            // fn_args[0] = .{
-            //     .is_generic = false,
-            //     .is_noalias = false,
-            //     .arg_type = @TypeOf(obj),
-            // };
-            // fn_args[1] = .{
-            //     .is_generic = false,
-            //     .is_noalias = false,
-            //     .arg_type = SEL,
-            // };
-            // inline for (args_meta) |a, i| {
-            //     fn_args[2 + i] = .{
-            //         .is_generic = false,
-            //         .is_noalias = false,
-            //         .arg_type = a.field_type,
-            //     };
-            // }
-            // break :blk @Type(.{ .Fn = .{
-            //     .calling_convention = .C,
-            //     .alignment = 0,
-            //     .is_generic = false,
-            //     .is_var_args = false,
-            //     .return_type = ReturnType,
-            //     .args = &fn_args,
-            // } });
-        }
-        {
-            // TODO(hazeycode): replace this hack with the more generalised code above once it doens't crash the compiler
-            break :blk switch (args_meta.len) {
-                0 => fn (@TypeOf(obj), SEL) callconv(.C) ReturnType,
-                1 => fn (@TypeOf(obj), SEL, args_meta[0].field_type) callconv(.C) ReturnType,
-                2 => fn (@TypeOf(obj), SEL, args_meta[0].field_type, args_meta[1].field_type) callconv(.C) ReturnType,
-                3 => fn (@TypeOf(obj), SEL, args_meta[0].field_type, args_meta[1].field_type, args_meta[2].field_type) callconv(.C) ReturnType,
-                4 => fn (@TypeOf(obj), SEL, args_meta[0].field_type, args_meta[1].field_type, args_meta[2].field_type, args_meta[3].field_type) callconv(.C) ReturnType,
-                else => @compileError("Unsupported number of args"),
-            };
-        }
-    };
-
-    // NOTE: func is a var because making it const causes a compile error which I believe is a compiler bug
-    var func = @ptrCast(FnType, c.objc_msgSend);
-    const sel = c.sel_getUid(sel_name);
-
-    return @call(.{}, func, .{ obj, sel } ++ args);
-}
+// Adding classes
 
 pub fn allocateClassPair(superclass: Class, class_name: [:0]const u8) !Class {
     return c.objc_allocateClassPair(superclass, class_name, 0) orelse error.FailedToAllocateClassPair;
@@ -94,6 +47,10 @@ pub fn allocateClassPair(superclass: Class, class_name: [:0]const u8) !Class {
 
 pub fn registerClass(class: Class) void {
     c.objc_registerClassPair(class);
+}
+
+pub fn disposeClassPair(class: Class) void {
+    c.objc_disposeClassPair(class);
 }
 
 test {
