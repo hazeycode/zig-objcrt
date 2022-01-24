@@ -19,6 +19,9 @@ pub const id = *object;
 /// An opaque type that represents a method selector.
 pub const SEL = *c.objc_selector;
 
+/// A pointer to the function of a method implementation.
+pub const IMP = *const anyopaque;
+
 /// Registers a method with the Objective-C runtime system, maps the method 
 /// name to a selector, and returns the selector value.
 ///
@@ -39,10 +42,10 @@ pub fn sel_registerName(str: [:0]const u8) Error!SEL {
 /// 
 /// @return A pointer of type SEL specifying the selector for the named method.
 /// 
-/// @note The implementation of this method is identical to the implementation of \c sel_registerName.
+/// @note The implementation of this method is identical to the implementation of sel_registerName.
 /// @note Prior to OS X version 10.0, this method tried to find the selector mapped to the given name
-///  and returned \c NULL if the selector was not found. This was changed for safety, because it was
-///  observed that many of the callers of this function did not check the return value for \c NULL.
+///  and returned NULL if the selector was not found. This was changed for safety, because it was
+///  observed that many of the callers of this function did not check the return value for NULL.
 pub fn sel_getUid(str: [:0]const u8) Error!SEL {
     return c.sel_getUid(str) orelse Error._NonnulTypeWasNull;
 }

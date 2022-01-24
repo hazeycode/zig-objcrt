@@ -1,3 +1,6 @@
+//! This module provides type-safe-ish bindings to the API defined in objc/message.h
+// TODO(hazeycode): add missing definitions
+
 const std = @import("std");
 
 const c = @import("c.zig");
@@ -9,9 +12,13 @@ const id = objc.id;
 const SEL = objc.SEL;
 const sel_getUid = objc.sel_getUid;
 
-pub fn msgSend(obj: anytype, sel_name: [:0]const u8, args: anytype, comptime ReturnType: type) ReturnType {
-    const args_meta = @typeInfo(@TypeOf(args)).Struct.fields;
+/// Sends a message with a simple return value to an id or Class
+/// Returns the return value of the called method
+pub fn msgSend(comptime ReturnType: type, target: anytype, selector: SEL, args: anytype) ReturnType {
+    const target_type = @TypeOf(target);
+    std.debug.assert(target_type == id or target_type == Class);
 
+    const args_meta = @typeInfo(@TypeOf(args)).Struct.fields;
     const FnType = blk: {
         {
             // NOTE(hazeycode): The following commented out code crashes the compiler :( last tested with Zig 0.9.0
@@ -20,7 +27,7 @@ pub fn msgSend(obj: anytype, sel_name: [:0]const u8, args: anytype, comptime Ret
             // fn_args[0] = .{
             //     .is_generic = false,
             //     .is_noalias = false,
-            //     .arg_type = @TypeOf(obj),
+            //     .arg_type = @TypeOf(target),
             // };
             // fn_args[1] = .{
             //     .is_generic = false,
@@ -46,19 +53,18 @@ pub fn msgSend(obj: anytype, sel_name: [:0]const u8, args: anytype, comptime Ret
         {
             // TODO(hazeycode): replace this hack with the more generalised code above once it doens't crash the compiler
             break :blk switch (args_meta.len) {
-                0 => fn (@TypeOf(obj), SEL) callconv(.C) ReturnType,
-                1 => fn (@TypeOf(obj), SEL, args_meta[0].field_type) callconv(.C) ReturnType,
-                2 => fn (@TypeOf(obj), SEL, args_meta[0].field_type, args_meta[1].field_type) callconv(.C) ReturnType,
-                3 => fn (@TypeOf(obj), SEL, args_meta[0].field_type, args_meta[1].field_type, args_meta[2].field_type) callconv(.C) ReturnType,
-                4 => fn (@TypeOf(obj), SEL, args_meta[0].field_type, args_meta[1].field_type, args_meta[2].field_type, args_meta[3].field_type) callconv(.C) ReturnType,
-                else => @compileError("Unsupported number of args"),
+                0 => fn (@TypeOf(target), SEL) callconv(.C) ReturnType,
+                1 => fn (@TypeOf(target), SEL, args_meta[0].field_type) callconv(.C) ReturnType,
+                2 => fn (@TypeOf(target), SEL, args_meta[0].field_type, args_meta[1].field_type) callconv(.C) ReturnType,
+                3 => fn (@TypeOf(target), SEL, args_meta[0].field_type, args_meta[1].field_type, args_meta[2].field_type) callconv(.C) ReturnType,
+                4 => fn (@TypeOf(target), SEL, args_meta[0].field_type, args_meta[1].field_type, args_meta[2].field_type, args_meta[3].field_type) callconv(.C) ReturnType,
+                else => @compileError("Unsupported number of args: add more variants in zig-objcrt/src/message.zig"),
             };
         }
     };
 
     // NOTE: func is a var because making it const causes a compile error which I believe is a compiler bug
     var func = @ptrCast(FnType, c.objc_msgSend);
-    const sel = sel_getUid(sel_name) catch unreachable;
 
-    return @call(.{}, func, .{ obj, sel } ++ args);
+    return @call(.{}, func, .{ target, selector } ++ args);
 }
