@@ -165,7 +165,7 @@ pub fn allocateClassPair(superclass: ?Class, class_name: [:0]const u8, extra_byt
 /// Registers a class that was allocated using allocateClassPair.
 /// 
 /// @param cls The class you want to register.
-pub fn registerClass(class: Class) void {
+pub fn registerClassPair(class: Class) void {
     c.objc_registerClassPair(class);
 }
 
