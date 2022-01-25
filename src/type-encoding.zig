@@ -42,12 +42,16 @@ const TypeEncodingToken = enum(u8) {
     unknown = '?', // An unknown type (among other things, this code is used for function pointers)
 };
 
-pub fn writeEncodingForType(comptime T: type, writer: anytype) !void {
+pub fn writeEncodingForType(comptime MaybeT: ?type, writer: anytype) !void {
     var levels_of_indirection: u32 = 0;
-    return writeEncodingForTypeInternal(T, &levels_of_indirection, writer);
+    return writeEncodingForTypeInternal(MaybeT, &levels_of_indirection, writer);
 }
 
-fn writeEncodingForTypeInternal(comptime T: type, levels_of_indirection: *u32, writer: anytype) !void {
+fn writeEncodingForTypeInternal(comptime MaybeT: ?type, levels_of_indirection: *u32, writer: anytype) !void {
+    const T = MaybeT orelse {
+        try writeTypeEncodingToken(.void, writer);
+        return;
+    };
     switch (T) {
         i8 => try writeTypeEncodingToken(.char, writer),
         c_int => try writeTypeEncodingToken(.int, writer),
@@ -75,7 +79,12 @@ fn writeEncodingForTypeInternal(comptime T: type, levels_of_indirection: *u32, w
             try writeTypeEncodingToken(.struct_end, writer);
         },
         else => switch (@typeInfo(T)) {
-            .Fn => |_| try writeTypeEncodingToken(.unknown, writer),
+            .Fn => |fn_info| {
+                try writeEncodingForTypeInternal(fn_info.return_type, levels_of_indirection, writer);
+                inline for (fn_info.args) |arg| {
+                    try writeEncodingForTypeInternal(arg.arg_type, levels_of_indirection, writer);
+                }
+            },
             .Array => |arr_info| {
                 try writeTypeEncodingToken(.array_begin, writer);
                 try writer.print("{d}", .{arr_info.len});
@@ -151,4 +160,19 @@ test "write encoding for struct, pointer to struct and pointer to pointer to str
         try writeEncodingForType(**Example, fbs.writer());
         try testing.expectEqualSlices(u8, "^^{Example}", fbs.getWritten());
     }
+}
+
+test "write encoding for fn" {
+    try struct {
+        pub fn runTest() !void {
+            var buffer: [0x100]u8 = undefined;
+            var fbs = std.io.fixedBufferStream(&buffer);
+            try writeEncodingForType(@TypeOf(add), fbs.writer());
+            try testing.expectEqualSlices(u8, "i@:ii", fbs.getWritten());
+        }
+
+        fn add(_: id, _: SEL, a: c_int, b: c_int) callconv(.C) c_int {
+            return a + b;
+        }
+    }.runTest();
 }
