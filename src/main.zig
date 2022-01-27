@@ -41,11 +41,11 @@ pub fn msgSendByName(comptime ReturnType: type, target: anytype, sel_name: [:0]c
     return msgSend(ReturnType, target, selector, args);
 }
 
-/// Convenience fn for sending an alloc message to a Class object followed by an init message to the returned Class instance
-pub fn allocAndInit(class: Class) !id {
-    const alloc_sel = try sel_getUid("alloc");
-    const init_sel = try sel_getUid("init");
-    return msgSend(id, msgSend(Class, class, alloc_sel, .{}), init_sel, .{});
+/// Convenience fn for sending an new message to a Class object
+/// Which is equivilent to sending an alloc message to a Class object followed by an init message to the returned Class instance
+pub fn new(class: Class) !id {
+    const new_sel = try sel_getUid("new");
+    return msgSend(id, class, new_sel, .{});
 }
 
 /// Convenience fn for sending a dealloc message to object
@@ -125,9 +125,9 @@ test {
     testing.refAllDecls(@This());
 }
 
-test "alloc/init/dealloc NSObject" {
+test "new/dealloc NSObject" {
     const NSObject = try getClass("NSObject");
-    const new_obj = try allocAndInit(NSObject);
+    const new_obj = try new(NSObject);
     try dealloc(new_obj);
 }
 
@@ -147,7 +147,7 @@ test "register/call/deregister Objective-C Class" {
                 },
             );
 
-            const instance = try allocAndInit(TestClass);
+            const instance = try new(TestClass);
 
             try testing.expectEqual(
                 @as(c_int, 3),
