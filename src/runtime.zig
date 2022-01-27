@@ -14,6 +14,7 @@ const c = @import("c.zig");
 
 pub const Error = error{
     FailedToGetClassForObject,
+    FailedToGetInstanceVariable,
     ClassNotRegisteredWithRuntime,
     FailedToAllocateClassPair,
 };
@@ -32,20 +33,18 @@ pub const Category = *c.objc_category;
 /// An opaque type that represents an Objective-C declared property.
 pub const Property = *c.objc_property;
 
-// ----- Working with instances -----
+// ----- Working with Instances -----
 
 /// Returns the class of an object.
 /// 
-/// @param obj An id or Class of the object you want to inspect.
+/// @param obj An id of the object you want to inspect.
 /// 
 /// @return The class object of which object is an instance
-pub fn object_getClass(obj: anytype) Error!Class {
-    const obj_type = @TypeOf(obj);
-    std.debug.assert(obj_type == id or obj_type == Class);
-    return c.object_getClass(id) orelse Error.FailedToGetClassForObject;
+pub fn object_getClass(obj: id) Error!Class {
+    return c.object_getClass(obj) orelse Error.FailedToGetClassForObject;
 }
 
-// ----- Obtaining Class definitions ----
+// ----- Obtaining Class Definitions ----
 
 /// Returns the class definition of a specified class, or an error if the class is not registered
 /// with the Objective-C runtime.
