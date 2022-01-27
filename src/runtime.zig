@@ -16,6 +16,7 @@ pub const Error = error{
     FailedToGetClassForObject,
     FailedToGetInstanceVariable,
     ClassNotRegisteredWithRuntime,
+    FailedToGetClassVariable,
     FailedToAllocateClassPair,
 };
 
@@ -42,6 +43,20 @@ pub const Property = *c.objc_property;
 /// @return The class object of which object is an instance
 pub fn object_getClass(obj: id) Error!Class {
     return c.object_getClass(obj) orelse Error.FailedToGetClassForObject;
+}
+
+/// Obtains the value of an instance variable and the assosciated `Ivar` of a class instance.
+/// 
+/// @param obj An instance of the class containing the instance variable whose value you wish to obtain.
+/// @param name The name of the instance variable whose value you wish to obtain.
+/// @param outValue On return, contains a pointer to the value of the instance variable.
+/// 
+/// Returns a struct containing an `Ivar` that defines the type and name of the instance
+/// variable specified by `name` and the 
+pub fn object_getInstanceVariable(comptime ValueType: type, obj: id, name: [:0]const u8) Error!struct { ivar: Ivar, value: ValueType } {
+    var value_ptr: *ValueType = undefined;
+    const maybe_ivar = c.object_getInstanceVariable(obj, name, @ptrCast([*c]?*anyopaque, &value_ptr));
+    return if (maybe_ivar) |ivar| .{ .ivar = ivar, .value = value_ptr.* } else Error.FailedToGetInstanceVariable;
 }
 
 // ----- Obtaining Class Definitions ----
@@ -85,6 +100,14 @@ pub fn getMetaClass(class_name: [:0]const u8) Error!Class {
 ///  time to see whether the class is registered. This function does not call the class handler callback.
 pub fn lookUpClass(class_name: [:0]const u8) ?Class {
     return c.objc_lookUpClass(class_name);
+}
+
+/// Returns the Ivar for a specified class variable of a given class.
+/// 
+/// @param cls The class definition whose class variable you wish to obtain.
+/// @param name The name of the class variable definition to obtain.
+pub fn class_getClassVariable(class: Class, name: [:0]const u8) Error!Ivar {
+    return c.class_getClassVariable(class, name) orelse Error.FailedToGetClassVariable;
 }
 
 // ----- Working with Classes -----
