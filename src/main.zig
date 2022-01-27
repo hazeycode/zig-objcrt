@@ -35,10 +35,6 @@ pub const msgSend = message.msgSend;
 const type_encoding = @import("type-encoding.zig");
 const writeEncodingForType = type_encoding.writeEncodingForType;
 
-pub const Error = error{
-    FailedToAddIvarToClass,
-};
-
 /// The same as calling msgSend except takes a selector name instead of a selector
 pub fn msgSendByName(comptime ReturnType: type, target: anytype, sel_name: [:0]const u8, args: anytype) !ReturnType {
     const selector = try sel_getUid(sel_name);
@@ -58,42 +54,63 @@ pub fn dealloc(instance: id) !void {
     msgSend(void, instance, dealloc_sel, .{});
 }
 
+pub const Error = error{
+    ClassNameRequired,
+    SuperclassRequired,
+    FailedToAddIvarToClass,
+};
+
 pub const IvarDesc = struct {
     name: [:0]const u8,
     @"type": type,
 };
 
 /// Convenience fn for defining and registering a new Class
-pub fn defineAndRegisterClass(name: [:0]const u8, superclass: Class, comptime ivars: []const IvarDesc, methods: anytype) !Class {
+/// dispose of the resultng class using `disposeClassPair`
+pub fn defineAndRegisterClass(name: [:0]const u8, superclass: Class, ivars: anytype, methods: anytype) !Class {
     const class = try allocateClassPair(superclass, name, 0);
     errdefer disposeClassPair(class);
 
+    // reuseable buffer for type encoding strings
     var type_encoding_buf = [_]u8{0} ** 256;
 
+    // add ivars to class
     inline for (ivars) |ivar| {
+        const ivar_name = ivar.@"0";
+        const ivar_type = ivar.@"1";
         const type_enc_str = encode: {
             var fbs = std.io.fixedBufferStream(&type_encoding_buf);
-            try writeEncodingForType(ivar.type, fbs.writer());
+            try writeEncodingForType(ivar_type, fbs.writer());
             const len = fbs.getWritten().len + 1;
             break :encode type_encoding_buf[0..len :0];
         };
-        if (class_addIvar(class, ivar.name, @sizeOf(ivar.type), @alignOf(ivar.type), type_enc_str) == false) {
+        var ivar_name_terminated = [_]u8{0} ** (ivar_name.len + 1);
+        std.mem.copy(u8, &ivar_name_terminated, ivar_name);
+        if (class_addIvar(class, ivar_name_terminated[0..ivar_name.len :0], @sizeOf(ivar_type), @alignOf(ivar_type), type_enc_str) == false) {
             return error.FailedToAddIvarToClass;
         }
         std.mem.set(u8, &type_encoding_buf, 0);
     }
 
+    // add methods to class
     inline for (methods) |m| {
-        const FnType = @TypeOf(m);
+        const fn_name = m.@"0";
+        const func = m.@"1";
+        const FnType = @TypeOf(func);
         const type_enc_str = encode: {
             var fbs = std.io.fixedBufferStream(&type_encoding_buf);
             try writeEncodingForType(FnType, fbs.writer());
             const len = fbs.getWritten().len + 1;
             break :encode type_encoding_buf[0..len :0];
         };
-        std.debug.print("{s}\n", .{type_enc_str});
-        const selector = try sel_getUid(@typeName(FnType));
-        if (class_addMethod(class, selector, m, type_enc_str) == false) {
+        const selector = try sel_getUid(fn_name);
+        const result = class_addMethod(
+            class,
+            selector,
+            func,
+            type_enc_str,
+        );
+        if (result == false) {
             return error.FailedToAddMethodToClass;
         }
         std.mem.set(u8, &type_encoding_buf, 0);
@@ -122,11 +139,11 @@ test "register/call/deregister Objective-C Class" {
             const TestClass = try defineAndRegisterClass(
                 "TestClass",
                 NSObject,
-                &.{
-                    .{ .name = "foo", .type = c_int },
+                .{
+                    .{ "foo", c_int },
                 },
                 .{
-                    add,
+                    .{ "add", add },
                 },
             );
 
@@ -140,7 +157,7 @@ test "register/call/deregister Objective-C Class" {
             try dealloc(instance);
         }
 
-        fn add(_: id, _: SEL, a: c_int, b: c_int) callconv(.C) c_int {
+        pub fn add(_: id, _: SEL, a: c_int, b: c_int) callconv(.C) c_int {
             return a + b;
         }
     }.runTest();

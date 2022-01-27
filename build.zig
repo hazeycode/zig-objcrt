@@ -7,11 +7,11 @@ pub fn build(b: *std.build.Builder) !void {
 
     const lib = b.addStaticLibrary("zig-objcrt", "src/main.zig");
     lib.setBuildMode(mode);
+    lib.linkFramework("CoreFoundation");
     lib.install();
 
     const main_tests = b.addTest("src/main.zig");
     main_tests.setBuildMode(mode);
-
     main_tests.linkFramework("CoreFoundation");
 
     const test_step = b.step("test", "Run library tests");

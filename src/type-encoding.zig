@@ -1,4 +1,4 @@
-//! Thid module provides functions to convert supported Zig types to Objective-C type encodings
+//! This module provides functions to convert supported Zig types to Objective-C type encodings
 // TODO(hazeycode): more tests
 
 const std = @import("std");
@@ -10,7 +10,7 @@ const Class = objc.Class;
 const id = objc.id;
 const SEL = objc.SEL;
 
-/// https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html
+/// Enum representing typecodes as defined by Apple's docs https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html
 const TypeEncodingToken = enum(u8) {
     char = 'c',
     int = 'i',
