@@ -2,9 +2,11 @@
 
 Objective-C Runtime bindings for Zig 
 
-Provides thin, type-safe API bindings
+Provides thin API bindings with a little added type-safety and error handling
 
-Also provides higher-level wrappers to make working with the objc runtime nicer. Let's you write code like this:
+Also provides higher-level wrappers to make working with the objc runtime nicer
+
+Let's you write code like this:
 
 ```zig
 pub fn main() anyerror!void {
