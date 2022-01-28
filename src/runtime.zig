@@ -18,6 +18,7 @@ pub const Error = error{
     ClassNotRegisteredWithRuntime,
     FailedToGetClassVariable,
     FailedToAllocateClassPair,
+    NoSuchProtocol,
 };
 
 // ----- Types -----
@@ -33,6 +34,8 @@ pub const Category = *c.objc_category;
 
 /// An opaque type that represents an Objective-C declared property.
 pub const Property = *c.objc_property;
+
+pub const Protocol = c.objc_object;
 
 // ----- Working with Instances -----
 
@@ -108,6 +111,12 @@ pub fn lookUpClass(class_name: [:0]const u8) ?Class {
 /// @param name The name of the class variable definition to obtain.
 pub fn class_getClassVariable(class: Class, name: [:0]const u8) Error!Ivar {
     return c.class_getClassVariable(class, name) orelse Error.FailedToGetClassVariable;
+}
+
+/// Returns a bool that indicates whether a class conforms to a given protocol.
+/// NOTE: You should usually use NSObject's conformsToProtocol: method instead of this function.
+pub fn class_conformsToProtocol(class: Class, protocol: *Protocol) bool {
+    return (c.class_conformsToProtocol(class, protocol) != 0);
 }
 
 // ----- Working with Classes -----
@@ -210,4 +219,11 @@ pub fn disposeClassPair(class: Class) void {
 /// @return The previous implementation of the method.
 pub fn method_setImplementation(m: Method, imp: IMP) ?IMP {
     return c.method_setImplementation(m, @ptrCast(fn () callconv(.C) void, imp));
+}
+
+// ----- Working with Protocols -----
+
+/// Returns a protocol specified by name
+pub fn getProtocol(name: [:0]const u8) Error!*Protocol {
+    return c.objc_getProtocol(name) orelse Error.NoSuchProtocol;
 }
