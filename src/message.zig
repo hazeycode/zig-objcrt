@@ -16,7 +16,7 @@ const sel_getUid = objc.sel_getUid;
 /// Returns the return value of the called method
 pub fn msgSend(comptime ReturnType: type, target: anytype, selector: SEL, args: anytype) ReturnType {
     const target_type = @TypeOf(target);
-    std.debug.assert(target_type == id or target_type == Class);
+    if ((target_type == id or target_type == Class) == false) @compileError("msgSend target should be of type id or Class");
 
     const args_meta = @typeInfo(@TypeOf(args)).Struct.fields;
     const FnType = blk: {
