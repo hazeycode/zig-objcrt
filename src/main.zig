@@ -60,14 +60,8 @@ pub fn dealloc(instance: id) !void {
 }
 
 pub const Error = error{
-    ClassNameRequired,
-    SuperclassRequired,
     FailedToAddIvarToClass,
-};
-
-pub const IvarDesc = struct {
-    name: [:0]const u8,
-    @"type": type,
+    FailedToAddMethodToClass,
 };
 
 /// Convenience fn for defining and registering a new Class
@@ -92,7 +86,7 @@ pub fn defineAndRegisterClass(name: [:0]const u8, superclass: Class, ivars: anyt
         var ivar_name_terminated = [_]u8{0} ** (ivar_name.len + 1);
         std.mem.copy(u8, &ivar_name_terminated, ivar_name);
         if (class_addIvar(class, ivar_name_terminated[0..ivar_name.len :0], @sizeOf(ivar_type), @alignOf(ivar_type), type_enc_str) == false) {
-            return error.FailedToAddIvarToClass;
+            return Error.FailedToAddIvarToClass;
         }
         std.mem.set(u8, &type_encoding_buf, 0);
     }
@@ -108,7 +102,7 @@ pub fn defineAndRegisterClass(name: [:0]const u8, superclass: Class, ivars: anyt
             const len = fbs.getWritten().len + 1;
             break :encode type_encoding_buf[0..len :0];
         };
-        const selector = try sel_getUid(fn_name);
+        const selector = try sel_registerName(fn_name);
         const result = class_addMethod(
             class,
             selector,
@@ -116,7 +110,7 @@ pub fn defineAndRegisterClass(name: [:0]const u8, superclass: Class, ivars: anyt
             type_enc_str,
         );
         if (result == false) {
-            return error.FailedToAddMethodToClass;
+            return Error.FailedToAddMethodToClass;
         }
         std.mem.set(u8, &type_encoding_buf, 0);
     }
