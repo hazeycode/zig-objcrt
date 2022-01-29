@@ -3,7 +3,7 @@
 const std = @import("std");
 const testing = std.testing;
 
-pub const NULL: ?id = null;
+pub const nil: ?id = null;
 
 const objc = @import("objc.zig");
 pub const object = objc.object;
