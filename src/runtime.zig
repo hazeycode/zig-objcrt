@@ -124,11 +124,15 @@ pub fn class_getInstanceMethod(class: Class, selector: SEL) ?Method {
 /// null if the specified class or its superclasses do not contain an class method with the specified selector.
 /// NOTE: This function searches superclasses for implementations, whereas `class_copyMethodList` does not.
 pub fn class_getClassMethod(class: Class, selector: SEL) ?Method {
-    return c.class_getInstanceMethod(class, selector);
+    return c.class_getClassMethod(class, selector);
+}
+
+/// Returns a Boolean value that indicates whether instances of a class respond to a particular selector.
+pub fn class_respondsToSelector(class: Class, selector: SEL) bool {
+    return (c.class_respondsToSelector(class, selector) != 0);
 }
 
 /// Returns a bool that indicates whether a class conforms to a given protocol.
-/// NOTE: You should usually use NSObject's conformsToProtocol: method instead of this function.
 pub fn class_conformsToProtocol(class: Class, protocol: *Protocol) bool {
     return (c.class_conformsToProtocol(class, protocol) != 0);
 }

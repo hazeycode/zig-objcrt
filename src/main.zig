@@ -28,6 +28,7 @@ pub const lookUpClass = runtime.lookUpClass;
 pub const class_getClassVariable = runtime.class_getClassVariable;
 pub const class_getInstanceMethod = runtime.class_getInstanceMethod;
 pub const class_getClassMethod = runtime.class_getClassMethod;
+pub const class_respondsToSelector = runtime.class_respondsToSelector;
 pub const class_conformsToProtocol = runtime.class_conformsToProtocol;
 pub const allocateClassPair = runtime.allocateClassPair;
 pub const registerClassPair = runtime.registerClassPair;
@@ -44,8 +45,37 @@ pub const msgSend = message.msgSend;
 const type_encoding = @import("type-encoding.zig");
 const writeEncodingForType = type_encoding.writeEncodingForType;
 
-/// The same as calling msgSend except takes a selector name instead of a selector
+pub const Error = error{
+    ClassDoesNotRespondToSelector,
+    InstanceDoesNotRespondToSelector,
+    FailedToAddIvarToClass,
+    FailedToAddMethodToClass,
+};
+
+/// Checks whether the target implements the method described by selector and then sends a message
+/// Returns the return value of the called method or an error if the target does not implement the corresponding method
+pub fn msgSendChecked(comptime ReturnType: type, target: anytype, selector: SEL, args: anytype) !ReturnType {
+    switch (@TypeOf(target)) {
+        Class => {
+            if (class_getClassMethod(target, selector) == null) return Error.ClassDoesNotRespondToSelector;
+        },
+        id => {
+            const class = try object_getClass(target);
+            if (class_getInstanceMethod(class, selector) == null) return Error.InstanceDoesNotRespondToSelector;
+        },
+        else => @compileError("Invalid msgSend target type. Must be a Class or id"),
+    }
+    return msgSend(ReturnType, target, selector, args);
+}
+
+/// The same as calling msgSendChecked except takes a selector name instead of a selector
 pub fn msgSendByName(comptime ReturnType: type, target: anytype, sel_name: [:0]const u8, args: anytype) !ReturnType {
+    const selector = try sel_getUid(sel_name);
+    return msgSendChecked(ReturnType, target, selector, args);
+}
+
+/// The same as calling msgSend except takes a selector name instead of a selector
+pub fn msgSendByNameUnchecked(comptime ReturnType: type, target: anytype, sel_name: [:0]const u8, args: anytype) !ReturnType {
     const selector = try sel_getUid(sel_name);
     return msgSend(ReturnType, target, selector, args);
 }
@@ -62,11 +92,6 @@ pub fn dealloc(instance: id) !void {
     const dealloc_sel = try sel_getUid("dealloc");
     msgSend(void, instance, dealloc_sel, .{});
 }
-
-pub const Error = error{
-    FailedToAddIvarToClass,
-    FailedToAddMethodToClass,
-};
 
 /// Convenience fn for defining and registering a new Class
 /// dispose of the resultng class using `disposeClassPair`
