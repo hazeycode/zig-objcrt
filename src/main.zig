@@ -3,6 +3,8 @@
 const std = @import("std");
 const testing = std.testing;
 
+pub const NULL: ?id = null;
+
 const objc = @import("objc.zig");
 pub const object = objc.object;
 pub const Class = objc.Class;
