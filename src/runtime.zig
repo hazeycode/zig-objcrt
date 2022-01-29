@@ -113,6 +113,20 @@ pub fn class_getClassVariable(class: Class, name: [:0]const u8) Error!Ivar {
     return c.class_getClassVariable(class, name) orelse Error.FailedToGetClassVariable;
 }
 
+/// Returns an instance method corresponding to the implementation of a given selector for  given class
+/// null if the specified class or its superclasses do not contain an instance method with the specified selector.
+/// NOTE: This function searches superclasses for implementations, whereas `class_copyMethodList` does not.
+pub fn class_getInstanceMethod(class: Class, selector: SEL) ?Method {
+    return c.class_getInstanceMethod(class, selector);
+}
+
+/// Returns an class method corresponding to the implementation of a given selector for  given class
+/// null if the specified class or its superclasses do not contain an class method with the specified selector.
+/// NOTE: This function searches superclasses for implementations, whereas `class_copyMethodList` does not.
+pub fn class_getClassMethod(class: Class, selector: SEL) ?Method {
+    return c.class_getInstanceMethod(class, selector);
+}
+
 /// Returns a bool that indicates whether a class conforms to a given protocol.
 /// NOTE: You should usually use NSObject's conformsToProtocol: method instead of this function.
 pub fn class_conformsToProtocol(class: Class, protocol: *Protocol) bool {
