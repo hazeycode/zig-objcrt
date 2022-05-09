@@ -7,7 +7,7 @@ Provides thin API bindings with a little added type-safety and error handling
 Also provides higher-level wrappers to make working with the objc runtime a little bit nicer
 
 
-**NOTE:** This is for working with the runtime API, user-friendly bindings to Apple Frameworks are not provided by this library. Also see https://github.com/kubkon/ZigKit
+**NOTE:** This is for working with the runtime API, user-friendly bindings to Apple Frameworks are not provided by this library but may be built on top. For bindings to Apple's C libraries, see https://github.com/kubkon/ZigKit
 
 
 **WARNING:** In early development. Does not yet have full API coverage and needs more testing. The higher-level APIs, i.e. `defineAndRegisterClass` are very WIP as there are some things to be worked out regarding memory management. Open to suggestions and issues and PRs are most welcome.
