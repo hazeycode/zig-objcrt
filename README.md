@@ -10,7 +10,10 @@ Also provides higher-level wrappers to make working with the objc runtime a litt
 **NOTE:** This is for working with the runtime API, user-friendly bindings to Apple Frameworks are not provided by this library but may be built ontop.
 
 
-**WARNING:** In early development. Does not yet have full API coverage and needs more testing. Issues and PRs are most welcome.
+**WARNING:** In early development. Does not yet have full API coverage and needs more testing. The higher-level APIs, i.e. `defineAndRegisterClass` are very WIP as there are some things to be worked out regarding memory management. Open to suggestions and issues and PRs are most welcome.
+
+
+**NOTE:** Currently uses translate-c on the objective-c headers that are vendored with Zig. It's perhaps better not to rely on these and replace with extern definitions?
 
 
 ### Example usage
