@@ -1,6 +1,8 @@
 # zig-objcrt
 
-Objective-C Runtime bindings for Zig 
+Objective-C Runtime bindings for Zig..
+
+**NOTE:** I don't have any plans to work on this within the near future. Archiving for reference.
 
 Provides thin API bindings with a little added type-safety and error handling
 
